@@ -7,18 +7,17 @@
 
 ---
 
-## Repo 結構建議
+## Repo 結構
 
 ```
-
 .
-├── userscript/
-│   └── civitai_manager.user.js
-├── tools/
-│   └── download_from_meta.py
-└── README.md
-
-````
+├── tampermonkey_script.js          # Tampermonkey 腳本 - 在 Civitai 頁面收集模型資訊
+├── download_civitai_json.py        # Python 下載器 - 根據 JSON 下載檔案
+├── Comfyui_link_builder.sh         # ComfyUI 連結生成 - 建立符號連結到模型資料夾
+├── demo.json                       # 示例 JSON 檔案 - 展示匯出格式與結構
+├── README.md                       # 本文檔
+└── LICENSE
+```
 
 ---
 
@@ -41,7 +40,7 @@ python3 -m pip install -U requests
 
 ## 1) 安裝 Tampermonkey 腳本
 
-1. 在 Tampermonkey 新增腳本，貼上 `civitai_manager.user.js` 內容並儲存。
+1. 在 Tampermonkey 新增腳本，貼上 `tampermonkey_script.js` 內容並儲存。
 2. 打開任意 Civitai 模型頁：`https://civitai.com/models/...`
 3. 右上會出現 **Civitai Manager** 浮動面板：
 
@@ -116,7 +115,7 @@ export CIVIT_API="YOUR_TOKEN_HERE"
 基本用法：
 
 ```bash
-python3 tools/download_from_meta.py civitai_export.json ./downloads
+python3 download_civitai_json.py civitai_export.json ./downloads
 ```
 
 * 第一個參數：匯出的 `civitai_export.json`
@@ -157,6 +156,74 @@ Python 會對每個 item 嘗試解析 `meta.copiedMessage`（AIR URN）。成功
 
 ---
 
+## 5) ComfyUI 連結生成工具
+
+### 用途
+
+`Comfyui_link_builder.sh` 是一個 bash 腳本，用於快速將多個來源目錄的檔案透過**符號連結（symlink）**整合到單一目錄（通常是 ComfyUI 的模型資料夾）。
+
+### 基本用法
+
+```bash
+bash Comfyui_link_builder.sh <TARGET_DIR> <SOURCE1> <SOURCE2> [SOURCE3 ...]
+```
+
+**參數說明：**
+
+* `<TARGET_DIR>`：目標資料夾（建立符號連結的目的地）
+* `<SOURCE1> ... <SOURCEN>`：一個或多個來源資料夾路徑
+
+**範例：**
+
+```bash
+# 將 downloads 資料夾的所有模型連結到 ComfyUI models 資料夾
+bash Comfyui_link_builder.sh ~/ComfyUI/models ~/civit_script/downloads
+
+# 從多個來源整合到單一資料夾
+bash Comfyui_link_builder.sh ~/ComfyUI/models \
+  ~/civit_script/downloads \
+  ~/other_models_backup
+```
+
+### 選項
+
+**環境變數 `MATCH_GLOB`**：篩選要連結的檔案類型（預設為所有檔案）
+
+```bash
+# 只連結 .safetensors 檔案
+MATCH_GLOB="*.safetensors" bash Comfyui_link_builder.sh <TARGET_DIR> <SOURCES...>
+
+# 連結多種格式
+MATCH_GLOB="*.{safetensors,ckpt,pth}" bash Comfyui_link_builder.sh <TARGET_DIR> <SOURCES...>
+```
+
+### 行為說明
+
+* **保留目錄結構**：來源資料夾內的目錄結構會完整複製到目標資料夾
+* **符號連結**：建立的是軟連結（symlink），不佔用實際磁碟空間
+* **衝突處理**：若多個來源有同名檔案，**後來的來源會覆蓋先前的連結**
+* **自動建立目錄**：若目標路徑不存在，腳本會自動建立所需的子目錄
+
+---
+
+## 6) 示例檔案
+
+`demo.json` 是一個示例 JSON 檔案，展示 Tampermonkey 腳本匯出的資料格式與結構。
+
+**用途：**
+* 了解 `civitai_export.json` 的預期格式
+* 測試 `download_civitai_json.py` 下載器的功能
+* 參考 AIR URN 與模型元資料的結構
+
+**快速測試：**
+
+```bash
+export CIVIT_API="your_api_token"
+python3 download_civitai_json.py demo.json ./test_downloads
+```
+
+---
+
 ## 注意事項 / 已知行為
 
 * Python 下載器每次實際下載前會 `sleep(5)`，用於降低請求頻率。
@@ -174,7 +241,7 @@ Python 會對每個 item 嘗試解析 `meta.copiedMessage`（AIR URN）。成功
 
    ```bash
    export CIVIT_API="..."
-   python3 tools/download_from_meta.py civitai_export.json ./downloads
+   python3 download_civitai_json.py civitai_export.json ./downloads
    ```
 5. 下載完成後，`civitai_export.json` 會包含每個 item 的 `downloads` 記錄，便於後續追蹤與增量補抓。
 
