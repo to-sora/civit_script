@@ -1,4 +1,4 @@
-#!/bin/bash
+basedir="$HOME/ComfyUI"
 
 # Global flag for bypass confirmation
 BYPASS_CONFIRM=false
@@ -10,14 +10,11 @@ for arg in "$@"; do
     fi
 done
 
-basedir="$HOME/ComfyUI"
-
 linker() {
     local LINK_PATH="$1"
     local TARGET_PATH="$2"
     
     # 1. CASE: IT IS A REAL DIRECTORY (Not a symlink)
-    # We want to merge contents to target, delete dir, then link.
     if [ -d "$LINK_PATH" ] && [ ! -L "$LINK_PATH" ]; then
         echo "---------------------------------------------------"
         echo "DETECTED DIRECTORY at: $LINK_PATH"
@@ -35,44 +32,45 @@ linker() {
             echo "Auto-confirming merge (-Y passed)."
         fi
 
-        # Generate timestamp for backup suffix (e.g., _20231027_1030)
+        # Generate timestamp for backup suffix
         local timestamp
-        timestamp=$(date +"_%Y%m%d")
+        timestamp=$(date +"_%Y%m%d_%H%M%S")
 
         echo "DEBUG: Merging with rsync (backing up duplicates with suffix $timestamp)..."
         
-        # rsync breakdown:
-        # -a : archive mode (preserve permissions, times, etc)
-        # -v : verbose
-        # --remove-source-files : Delete files from source after successful transfer
-        # --backup : Make backups of files in destination if they already exist
-        # --suffix : Append this suffix to the backup files
-        rsync -av --remove-source-files --backup --suffix="$timestamp" "$LINK_PATH/" "$TARGET_PATH/"
+        # CHANGED: Replaced -av with -rltv to avoid permission/ownership errors on shared drives
+        # -r: recursive
+        # -l: copy symlinks
+        # -t: preserve modification times
+        # -v: verbose
+        # We OMIT -p, -o, -g so files inherit permissions/group from the destination folder
+        rsync -rltv --remove-source-files --backup --suffix="$timestamp" "$LINK_PATH/" "$TARGET_PATH/"
 
         if [ $? -eq 0 ]; then
             echo "DEBUG: Rsync merge successful."
-            # Remove the now empty directory structure (rsync --remove-source-files only removes files)
+            # Remove the now empty directory structure
             rm -rf "$LINK_PATH"
             echo "DEBUG: Directory removed. Ready to link."
         else
-            echo "ERROR: Rsync failed. Aborting link creation."
+            echo "ERROR: Rsync failed with code $?. Aborting link creation."
             return 1
         fi
     fi
     
     # 2. CASE: IT IS A SYMLINK (Existing)
     if [ -L "$LINK_PATH" ]; then
-        # Optional: Check if it points to the right place, if not, fix it
         local current_target
         current_target=$(readlink -f "$LINK_PATH")
         
+        # Optional: Check if symlink points to the correct location
+        # Since standard readlink might return relative paths or canonical paths differently, 
+        # strictly checking string equality can sometimes be tricky, but this is usually sufficient.
         if [ "$current_target" != "$TARGET_PATH" ]; then
-            echo "DEBUG: Fixing incorrect symlink: $LINK_PATH"
-            rm "$LINK_PATH"
-            ln -s "$TARGET_PATH" "$LINK_PATH"
-        else 
-             # It's already correct, do nothing
-             : 
+             # If you want to force update existing links, uncomment below:
+             # echo "DEBUG: Updating symlink: $LINK_PATH"
+             # rm "$LINK_PATH"
+             # ln -s "$TARGET_PATH" "$LINK_PATH"
+             echo "DEBUG: Symlink exists: $LINK_PATH -> $current_target"
         fi
         return 0
     fi
@@ -85,7 +83,6 @@ linker() {
     
     # 4. CASE: DOES NOT EXIST (Create new link)
     echo "DEBUG: Creating new symlink: $LINK_PATH -> $TARGET_PATH"
-    # Ensure parent dir exists
     mkdir -p "$(dirname "$LINK_PATH")"
     ln -s "$TARGET_PATH" "$LINK_PATH"
     return 0
