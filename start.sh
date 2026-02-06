@@ -1,3 +1,4 @@
+basedir="$HOME/ComfyUI"
 linker() {
     local LINK_PATH="$1"
     local TARGET_PATH="$2"
@@ -25,10 +26,10 @@ linker() {
     return 0
 }
 
-cd "$HOME/ComfyUI/"
+cd $basedir
 source venv/bin/activate
-linker "$HOME/ComfyUI/input" "/mnt/4T/Comfyui_MAIN/input"
-linker "$HOME/ComfyUI/output" "/mnt/4T/Comfyui_MAIN/output"
-find "$HOME/ComfyUI/models" -type l -exec sh -c 'rm "$1"' sh {} \;
-bash "$HOME/ComfyUI/civit_script/Comfyui_link_builder.sh" models/ /mnt/4T/Comfyui_P2/models/ /mnt/4T/Comfyui_P1/models/ /mnt/4T/Comfyui_MAIN/models/
+linker "$basedir/input" "/mnt/4T/Comfyui_MAIN/input"
+linker "$basedir/output" "/mnt/4T/Comfyui_MAIN/output"
+find "$basedir/models" -type l -exec sh -c 'rm "$1"' sh {} \;
+bash "$basedir/civit_script/Comfyui_link_builder.sh" models/ /mnt/4T/Comfyui_P2/models/ /mnt/4T/Comfyui_P1/models/ /mnt/4T/Comfyui_MAIN/models/ /mnt/4T/SD_MODEL_output/models
 python main.py --enable-manager --listen 0.0.0.0
