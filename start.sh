@@ -1,4 +1,5 @@
 basedir="$HOME/ComfyUI"
+MNT_ROOT="/mnt/4T"
 
 # Global flag for bypass confirmation
 BYPASS_CONFIRM=false
@@ -103,9 +104,9 @@ if [ -f "venv/bin/activate" ]; then
 fi
 
 # Run Linkers
-linker "$basedir/input" "/mnt/4T/Comfyui_MAIN/input"
-linker "$basedir/output" "/mnt/4T/Comfyui_MAIN/output"
-linker "$HOME/ComfyUI/user/default/workflows"  "/mnt/4T/Comfyui_MAIN/workflows"
+linker "$basedir/input" "$MNT_ROOT/Comfyui_MAIN/input"
+linker "$basedir/output" "$MNT_ROOT/Comfyui_MAIN/output"
+linker "$HOME/ComfyUI/user/default/workflows"  "$MNT_ROOT/Comfyui_MAIN/workflows"
 # Clean up old model symlinks
 # Note: Added -maxdepth 1 to avoid accidentally deleting things deep inside subfolders if models/ is a real dir
 if [ -d "$basedir/models" ]; then
@@ -114,7 +115,7 @@ fi
 
 # Run the Civit Link Builder
 if [ -f "$basedir/civit_script/Comfyui_link_builder.sh" ]; then
-    bash "$basedir/civit_script/Comfyui_link_builder.sh" models/ /mnt/4T/Comfyui_P2/models/ /mnt/4T/Comfyui_P1/models/ /mnt/4T/Comfyui_MAIN/models/ /mnt/4T/SD_MODEL_output/models
+    bash "$basedir/civit_script/Comfyui_link_builder.sh" models/ "$MNT_ROOT/Comfyui_P2/models/" "$MNT_ROOT/Comfyui_P1/models/" "$MNT_ROOT/Comfyui_MAIN/models/" "$MNT_ROOT/SD_MODEL_output/models"
 else
     echo "WARNING: Link builder script not found at $basedir/civit_script/Comfyui_link_builder.sh"
 fi
