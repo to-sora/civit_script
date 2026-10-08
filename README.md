@@ -1,5 +1,27 @@
 # Civitai Manager + Downloader (Tampermonkey + Python)
 
+## Workspace ComfyUI / 工作區 ComfyUI
+
+`install.sh` and `start.sh` use the sibling `../comfyui` checkout.
+啟動與安裝只使用同層的工作區 ComfyUI，不使用家目錄的版本。
+
+```bash
+bash install.sh
+bash start.sh
+```
+
+Startup uses HTTPS on `0.0.0.0:8188` with a project-local self-signed certificate.
+服務使用專案內自簽憑證，瀏覽器需手動接受。
+All custom nodes are disabled by default. `COMFY_ENABLE_LLM=1` permits only
+the installed `comfyui-llm-module`; no other extension is installed by these scripts.
+預設停用全部自訂節點；上述設定只允許已安裝的 LLM 模組。
+
+Python selection: `COMFY_PYTHON`, then `../comfyui/venv/bin/python`, then
+the sibling LLM module's application environment when the default environment is absent.
+可用上述環境變數指定 Python，預設環境不存在時沿用同層 LLM 模組環境。
+`COMFY_MODEL_ROOT` defaults to `/mnt/DATA9`; `COMFY_PORT` defaults to `8188`.
+既有 input/output 目錄會保留；模型來源後者優先，但保留目的地的實體檔案。
+
 一套兩段式工作流，用於批量收集 Civitai 模型/版本資訊與下載連結，然後在本機按規則落盤下載，同時把下載結果回寫到 JSON 方便追蹤。
 
 - **Tampermonkey 腳本**：在 `https://civitai.com/models/*` 頁面抓取模型描述 HTML、meta table、下載連結、以及（可選）AIR URN `copiedMessage`，並提供管理 UI（新增/刪除/搜尋/分頁/匯入匯出）。
@@ -201,8 +223,8 @@ MATCH_GLOB="*.{safetensors,ckpt,pth}" bash Comfyui_link_builder.sh <TARGET_DIR> 
 
 * **保留目錄結構**：來源資料夾內的目錄結構會完整複製到目標資料夾
 * **符號連結**：建立的是軟連結（symlink），不佔用實際磁碟空間
-* **衝突處理**：若多個來源有同名檔案，**後來的來源會覆蓋先前的連結**
-* **自動建立目錄**：若目標路徑不存在，腳本會自動建立所需的子目錄
+* **衝突處理**：若多個來源有同名檔案，**後來的來源會覆蓋先前的連結**；目的地的實體檔案或目錄會保留
+* **自動建立目錄**：目標資料夾需事先存在，腳本會自動建立所需的子目錄
 
 ---
 
@@ -249,5 +271,4 @@ python3 download_civitai_json.py demo.json ./test_downloads
 ### 關於 Tampermonkey 權限、程式碼注入與下載 API 設定說明
 
 本專案的 Tampermonkey 腳本需要在 Civitai 模型頁面中**動態注入並執行使用者腳本（DOM scraping + UI 注入）**，同時嘗試透過 **clipboard API** 讀取由頁面內建 Copy 按鈕產生的文字（`copiedMessage`），以及存取與管理 **跨分頁共享的 Tampermonkey storage**；因此使用者必須在 Tampermonkey 設定中允許該腳本於 `https://civitai.com/models/*` 執行、啟用 `@grant GM_getValue / GM_setValue / GM_download`，並確保瀏覽器未封鎖 `navigator.clipboard.readText()`（部分瀏覽器需要頁面具備使用者互動或允許剪貼簿權限，否則 `copiedMessage` 可能為空，但不影響下載）。另一方面，實際檔案下載由 **Python 腳本** 透過 Civitai 官方下載 API 進行，必須由使用者自行設定 `CIVIT_API` 環境變數作為 Bearer token；此設計刻意將「頁面抓取／管理」與「受權下載」分離，避免在瀏覽器端直接處理敏感 token，同時與你目前提供的腳本行為與安全邊界保持一致。
-
 
