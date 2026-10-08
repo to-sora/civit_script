@@ -52,8 +52,12 @@ link_tree() {
     dst_path="$DIR_A/$rel"
     dst_dir="$(dirname "$dst_path")"
 
+    if [[ -e "$dst_path" && ! -L "$dst_path" ]]; then
+      printf 'Preserving existing file or directory: %s\n' "$dst_path" >&2
+      continue
+    fi
     mkdir -p "$dst_dir"
-    ln -sfn "$src_path" "$dst_path"
+    ln -sfnT -- "$src_path" "$dst_path"
   done
 
   printf "Linked from %s: %s -> %s (MATCH_GLOB=%s)\n" \

@@ -3,7 +3,9 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
 basedir="$(cd -- "$script_dir/../comfyui" && pwd)"
 mnt_root="${COMFY_MODEL_ROOT:-/mnt/DATA9}"
-python_bin="${COMFY_PYTHON:-$basedir/venv/bin/python}"
+default_python="$basedir/venv/bin/python"
+[[ -x "$default_python" ]] || default_python="$script_dir/../comfyui-llm-module/plugin/.local-tool-app/venv/bin/python"
+python_bin="${COMFY_PYTHON:-$default_python}"
 tls_dir="${COMFY_TLS_DIR:-$basedir/.runtime/tls}"
 [[ -f "$basedir/main.py" && -x "$python_bin" ]] || {
     echo 'Run civit_script/install.sh first / 請先執行安裝腳本' >&2
